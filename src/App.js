@@ -42,7 +42,6 @@ function App() {
     const fetchTasksAndSet = async () => {
       try {
         const res = await fetchTasks(currentPage);
-        console.log("res", res);
         setTasks(res);
       } catch (error) {
         console.log(error);
