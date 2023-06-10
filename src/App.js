@@ -20,68 +20,55 @@ import EditIcon from "@mui/icons-material/Edit";
 import { API_URL } from "./contants/constant";
 
 function App() {
-  const [tasks, setTasks] = useState([]);
+  const [tasks, setTasks] = useState([]); // Initialize as an empty array
   const [task, setTask] = useState({ title: "" });
   const [isEditTask, setEditTask] = useState(false);
-  useEffect(() => {
-    getTasks();
-  }, []);
-  const getTasks = () => {
-    axios
-      .get(`${API_URL}tasks`)
-      .then(function (response) {
-        // handle success
-        setTasks(response.data);
-        console.log(response);
-      })
-      .catch(function (error) {
-        // handle error
-        setTasks([]);
-        console.log(error);
-      });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const fetchTasks = async (page) => {
+    try {
+      const response = await axios.get(`${API_URL}getTodoList/${page}/${5}`);
+      const { tasks, totalPages } = response.data;
+      setTasks(tasks);
+      setTotalPages(totalPages);
+    } catch (error) {
+      console.log(error);
+    }
   };
+
+  useEffect(() => {
+    fetchTasks(currentPage);
+  }, [currentPage]);
 
   const handleChange = (event) => {
     setTask({ ...task, [event.target.name]: event.target.value });
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
     if (task.title === "") return;
     if (task._id) {
       // Update operation
-      axios
-        .patch(`${API_URL}tasks/${task._id}`, { title: task.title })
-        .then(function (response) {
-          // handle success
-          const updatedData = tasks.map((item) =>
-            item._id === task._id ? task : item
-          );
-          setTasks(updatedData);
-          setTask({ title: "" });
-          setEditTask(false);
-        })
-        .catch(function (error) {
-          // handle error
-          setTask([]);
-          console.log(error);
-        });
+      try {
+        await axios.patch(`${API_URL}tasks/${task._id}`, { title: task.title });
+        fetchTasks(currentPage);
+        setEditTask(false);
+      } catch (error) {
+        console.log(error);
+      }
     } else {
       // Insert operation
-      axios
-        .post(`${API_URL}tasks`, task)
-        .then(function (response) {
-          // handle success
-          const newData = [...tasks, { ...response.data }];
-          setTasks(newData);
-          setTask({ title: "" });
-          setEditTask(false);
-        })
-        .catch(function (error) {
-          // handle error
-          setTasks([]);
-          console.log(error);
-        });
+      try {
+        const response = await axios.post(`${API_URL}tasks`, task);
+        const newData = [...tasks, { ...response.data }];
+        setTasks(newData);
+        setTask({ title: "" });
+        setEditTask(false);
+      } catch (error) {
+        console.log(error);
+      }
     }
 
     setTask({ id: "", title: "" });
@@ -89,23 +76,34 @@ function App() {
 
   const deleteTask = (taskId) => {
     axios
-      .delete(`http://localhost:5000/tasks/${taskId}`)
+      .delete(`${API_URL}tasks/${taskId}`)
       .then(function (response) {
-        // handle success
         const newData = tasks.filter((task) => task._id !== taskId);
         setTasks(newData);
         console.log(response);
       })
       .catch(function (error) {
-        // handle error
         console.log(error);
       });
   };
 
-  const handleEditTask = (taksId) => {
-    const itemToEdit = tasks.find((taksk) => taksk._id === taksId);
+  const handleEditTask = (taskId) => {
+    const itemToEdit = tasks.find((task) => task._id === taskId);
     setTask(itemToEdit);
     setEditTask(true);
+  };
+
+  const handlePageClick = (page) => {
+    setCurrentPage(page);
+  };
+
+  const loadingStyleObj = {
+    border: "1px solid",
+    height: "500px",
+    width: "202%",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
   };
 
   return (
@@ -127,7 +125,6 @@ function App() {
             {isEditTask ? "Edit" : "Add"}
           </Button>
         </Grid>
-        {/* {console.log(tasks)} */}
         <TableContainer component={Paper}>
           <Table sx={{ minWidth: 650 }} aria-label="simple table">
             <TableHead>
@@ -137,7 +134,7 @@ function App() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {tasks.length &&
+              {tasks.length > 0 &&
                 tasks.map((task) => (
                   <TableRow
                     key={task._id}
@@ -158,6 +155,21 @@ function App() {
                 ))}
             </TableBody>
           </Table>
+          {totalPages > 1 && (
+            <div>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "contained" : "outlined"}
+                    onClick={() => handlePageClick(page)}
+                  >
+                    {page}
+                  </Button>
+                )
+              )}
+            </div>
+          )}
         </TableContainer>
       </Container>
     </div>
