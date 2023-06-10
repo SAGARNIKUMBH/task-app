@@ -31,15 +31,25 @@ function App() {
     try {
       const response = await axios.get(`${API_URL}getTodoList/${page}/${5}`);
       const { tasks, totalPages } = response.data;
-      setTasks(tasks);
       setTotalPages(totalPages);
+      return tasks;
     } catch (error) {
       console.log(error);
     }
   };
 
   useEffect(() => {
-    fetchTasks(currentPage);
+    const fetchTasksAndSet = async () => {
+      try {
+        const res = await fetchTasks(currentPage);
+        console.log("res", res);
+        setTasks(res);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    fetchTasksAndSet();
   }, [currentPage]);
 
   const handleChange = (event) => {
@@ -53,7 +63,8 @@ function App() {
       // Update operation
       try {
         await axios.patch(`${API_URL}tasks/${task._id}`, { title: task.title });
-        fetchTasks(currentPage);
+        const res = await fetchTasks(currentPage);
+        setTasks(res);
         setEditTask(false);
       } catch (error) {
         console.log(error);
@@ -61,9 +72,11 @@ function App() {
     } else {
       // Insert operation
       try {
-        const response = await axios.post(`${API_URL}tasks`, task);
-        const newData = [...tasks, { ...response.data }];
-        setTasks(newData);
+        await axios.post(`${API_URL}tasks`, task);
+        // const newData = [...tasks, { ...response.data }];
+        // setTasks(newData);
+        const res = await fetchTasks(currentPage);
+        setTasks(res);
         setTask({ title: "" });
         setEditTask(false);
       } catch (error) {
@@ -74,17 +87,24 @@ function App() {
     setTask({ id: "", title: "" });
   };
 
-  const deleteTask = (taskId) => {
-    axios
-      .delete(`${API_URL}tasks/${taskId}`)
-      .then(function (response) {
-        const newData = tasks.filter((task) => task._id !== taskId);
-        setTasks(newData);
-        console.log(response);
-      })
-      .catch(function (error) {
-        console.log(error);
-      });
+  const deleteTask = async (taskId) => {
+    try {
+      const res = await axios.delete(`${API_URL}tasks/${taskId}`);
+      if (res) {
+        // console.log("tasks", tasks.length === 1 ? true : false);
+        const res = await fetchTasks(currentPage);
+        if (res.length === 0) {
+          const res = await fetchTasks(currentPage - 1);
+          setTasks(res);
+        } else {
+          setTasks(res);
+        }
+        // const newData = tasks.filter((task) => task._id !== taskId);
+        // setTasks(newData);
+      }
+    } catch (error) {
+      console.log("error", error);
+    }
   };
 
   const handleEditTask = (taskId) => {
