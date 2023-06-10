@@ -91,11 +91,11 @@ function App() {
       const res = await axios.delete(`${API_URL}tasks/${taskId}`);
       if (res) {
         // console.log("tasks", tasks.length === 1 ? true : false);
+        const res = await fetchTasks(currentPage);
         if (res.length === 0) {
           const res = await fetchTasks(currentPage - 1);
           setTasks(res);
         } else {
-          const res = await fetchTasks(currentPage);
           setTasks(res);
         }
         // const newData = tasks.filter((task) => task._id !== taskId);
